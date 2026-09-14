@@ -1,0 +1,2 @@
+-keep class pl.netbio.internetusageanalyzer.data.local.entity.** { *; }
+-keepclassmembers class * extends androidx.work.Worker { public <init>(...); }
