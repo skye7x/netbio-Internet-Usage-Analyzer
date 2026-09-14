@@ -5,7 +5,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -15,39 +14,34 @@ private val DarkColorScheme = darkColorScheme(
     secondary = AccentPurple,
     tertiary = AccentCyan,
     background = DarkBackground,
-    surface = DarkSurface,
-    surfaceVariant = DarkCard,
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
+    surface = DarkCard,
+    onPrimary = TextPrimary,
+    onSecondary = TextPrimary,
+    onTertiary = TextPrimary,
     onBackground = TextPrimary,
     onSurface = TextPrimary,
-    onSurfaceVariant = TextSecondary,
     error = ErrorRed,
-    onError = Color.White,
-    outline = GlassWhite20
+    onError = TextPrimary
 )
 
 @Composable
-fun NetBioTheme(
-    content: @Composable () -> Unit
-) {
-    val colorScheme = DarkColorScheme
+fun NetBioTheme(content: @Composable () -> Unit) {
     val view = LocalView.current
-
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = DarkBackground.toArgb()
             window.navigationBarColor = DarkBackground.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = false
+                isAppearanceLightNavigationBars = false
+            }
         }
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
+        colorScheme = DarkColorScheme,
+        typography = AppTypography,
         content = content
     )
 }

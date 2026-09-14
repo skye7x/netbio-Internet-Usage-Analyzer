@@ -1,30 +1,31 @@
 package pl.netbio.internetusageanalyzer.ui.navigation
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import pl.netbio.internetusageanalyzer.ui.components.GlassBottomNavigation
-import pl.netbio.internetusageanalyzer.ui.components.GlassNavItem
-import pl.netbio.internetusageanalyzer.ui.screens.dashboard.DashboardScreen
-import pl.netbio.internetusageanalyzer.ui.screens.speedtest.SpeedTestScreen
-import pl.netbio.internetusageanalyzer.ui.screens.diagnostics.DiagnosticsScreen
-import pl.netbio.internetusageanalyzer.ui.screens.wifi.WifiScreen
-import pl.netbio.internetusageanalyzer.ui.screens.history.HistoryScreen
+import pl.netbio.internetusageanalyzer.ui.components.*
 import pl.netbio.internetusageanalyzer.ui.screens.alerts.AlertsScreen
 import pl.netbio.internetusageanalyzer.ui.screens.appusage.AppUsageScreen
+import pl.netbio.internetusageanalyzer.ui.screens.dashboard.DashboardScreen
+import pl.netbio.internetusageanalyzer.ui.screens.diagnostics.DiagnosticsScreen
 import pl.netbio.internetusageanalyzer.ui.screens.export.ExportScreen
+import pl.netbio.internetusageanalyzer.ui.screens.history.HistoryScreen
 import pl.netbio.internetusageanalyzer.ui.screens.settings.SettingsScreen
-import pl.netbio.internetusageanalyzer.ui.theme.DarkBackground
+import pl.netbio.internetusageanalyzer.ui.screens.speedtest.SpeedTestScreen
+import pl.netbio.internetusageanalyzer.ui.screens.wifi.WifiScreen
+import pl.netbio.internetusageanalyzer.ui.theme.*
 
 sealed class Screen(val route: String) {
     data object Dashboard : Screen("dashboard")
@@ -51,8 +52,13 @@ fun AppNavigation(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val bottomBarScreens = listOf(Screen.Dashboard.route, Screen.SpeedTest.route, Screen.Diagnostics.route, Screen.History.route)
-    val showBottomBar = currentRoute in bottomBarScreens
+    val mainRoutes = listOf(
+        Screen.Dashboard.route,
+        Screen.SpeedTest.route,
+        Screen.Diagnostics.route,
+        Screen.History.route
+    )
+    val showBottomBar = currentRoute in mainRoutes || currentRoute == "more"
 
     Scaffold(
         containerColor = DarkBackground,
@@ -70,11 +76,26 @@ fun AppNavigation(navController: NavHostController) {
                     selectedItem = selectedIndex,
                     onItemClick = { index ->
                         when (index) {
-                            0 -> navController.navigate(Screen.Dashboard.route) { popUpTo(Screen.Dashboard.route) { inclusive = true } }
-                            1 -> navController.navigate(Screen.SpeedTest.route) { popUpTo(Screen.Dashboard.route) }
-                            2 -> navController.navigate(Screen.Diagnostics.route) { popUpTo(Screen.Dashboard.route) }
-                            3 -> navController.navigate(Screen.History.route) { popUpTo(Screen.Dashboard.route) }
-                            4 -> navController.navigate(Screen.Wifi.route) { popUpTo(Screen.Dashboard.route) }
+                            0 -> navController.navigate(Screen.Dashboard.route) {
+                                popUpTo(Screen.Dashboard.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                            1 -> navController.navigate(Screen.SpeedTest.route) {
+                                popUpTo(Screen.Dashboard.route)
+                                launchSingleTop = true
+                            }
+                            2 -> navController.navigate(Screen.Diagnostics.route) {
+                                popUpTo(Screen.Dashboard.route)
+                                launchSingleTop = true
+                            }
+                            3 -> navController.navigate(Screen.History.route) {
+                                popUpTo(Screen.Dashboard.route)
+                                launchSingleTop = true
+                            }
+                            4 -> navController.navigate("more") {
+                                popUpTo(Screen.Dashboard.route)
+                                launchSingleTop = true
+                            }
                         }
                     }
                 )
@@ -124,6 +145,92 @@ fun AppNavigation(navController: NavHostController) {
                     onExport = { navController.navigate(Screen.Export.route) }
                 )
             }
+            composable("more") {
+                MoreScreen(
+                    onNavigateToAlerts = { navController.navigate(Screen.Alerts.route) },
+                    onNavigateToAppUsage = { navController.navigate(Screen.AppUsage.route) },
+                    onNavigateToExport = { navController.navigate(Screen.Export.route) },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                    onNavigateToWifi = { navController.navigate(Screen.Wifi.route) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoreScreen(
+    onNavigateToAlerts: () -> Unit,
+    onNavigateToAppUsage: () -> Unit,
+    onNavigateToExport: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToWifi: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        GlassGlowBackground(modifier = Modifier.fillMaxSize())
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            Text(
+                "More",
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                color = TextPrimary
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                GlassSectionHeader(title = "Tools")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                GlassListItem(
+                    icon = Icons.Default.Notifications,
+                    title = "Alerts & Limits",
+                    subtitle = "Manage alerts and usage limits",
+                    iconTint = AccentOrange,
+                    onClick = onNavigateToAlerts
+                )
+                HorizontalDivider(color = GlassHigh)
+                GlassListItem(
+                    icon = Icons.Default.Apps,
+                    title = "App Usage",
+                    subtitle = "View per-app data usage",
+                    iconTint = AccentPurple,
+                    onClick = onNavigateToAppUsage
+                )
+                HorizontalDivider(color = GlassHigh)
+                GlassListItem(
+                    icon = Icons.Default.Wifi,
+                    title = "Wi-Fi Info",
+                    subtitle = "Network details and signal strength",
+                    iconTint = WifiColor,
+                    onClick = onNavigateToWifi
+                )
+                HorizontalDivider(color = GlassHigh)
+                GlassListItem(
+                    icon = Icons.Default.FileDownload,
+                    title = "Export Data",
+                    subtitle = "Export usage data to CSV or JSON",
+                    iconTint = AccentBlue,
+                    onClick = onNavigateToExport
+                )
+                HorizontalDivider(color = GlassHigh)
+                GlassListItem(
+                    icon = Icons.Default.Settings,
+                    title = "Settings",
+                    subtitle = "App configuration and preferences",
+                    iconTint = TextTertiary,
+                    onClick = onNavigateToSettings
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

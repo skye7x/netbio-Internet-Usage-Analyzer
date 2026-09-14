@@ -1,25 +1,18 @@
 package pl.netbio.internetusageanalyzer
 
-import android.app.Application
-import androidx.hilt.work.HiltWorkerFactory
-import androidx.work.Configuration
-import dagger.hilt.android.HiltAndroidApp
-import pl.netbio.internetusageanalyzer.service.UsageWorker
-import javax.inject.Inject
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
+import pl.netbio.internetusageanalyzer.ui.components.GlassGlowBackground
+import pl.netbio.internetusageanalyzer.ui.navigation.AppNavigation
 
-@HiltAndroidApp
-class NetBioApp : Application(), Configuration.Provider {
-
-    @Inject
-    lateinit var workerFactory: HiltWorkerFactory
-
-    override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
-
-    override fun onCreate() {
-        super.onCreate()
-        UsageWorker.scheduleUsageRecording(this)
+@Composable
+fun NetBioApp() {
+    val navController = rememberNavController()
+    Box(modifier = Modifier.fillMaxSize()) {
+        GlassGlowBackground(modifier = Modifier.fillMaxSize())
+        AppNavigation(navController = navController)
     }
 }

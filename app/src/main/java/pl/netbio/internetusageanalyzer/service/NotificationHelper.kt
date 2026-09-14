@@ -16,17 +16,16 @@ import javax.inject.Singleton
 class NotificationHelper @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     companion object {
         const val CHANNEL_USAGE = "usage_alerts"
-        const val CHANNEL_SPEEDTEST = "speedtest_results"
-        const val CHANNEL_NETWORK = "network_status"
-        const val CHANNEL_WIFI = "wifi_alerts"
+        const val CHANNEL_CONNECTION = "connection_alerts"
+        const val CHANNEL_ACHIEVEMENTS = "achievements"
         const val NOTIFICATION_USAGE = 1001
-        const val NOTIFICATION_SPEEDTEST = 1002
-        const val NOTIFICATION_NETWORK = 1003
-        const val NOTIFICATION_WIFI = 1004
+        const val NOTIFICATION_CONNECTION = 1002
+        const val NOTIFICATION_ACHIEVEMENT = 1003
     }
 
     init {
@@ -35,82 +34,143 @@ class NotificationHelper @Inject constructor(
 
     private fun createNotificationChannels() {
         val channels = listOf(
-            NotificationChannel(CHANNEL_USAGE, "Usage Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Notifications about data usage limits"
+            NotificationChannel(
+                CHANNEL_USAGE,
+                "Usage Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications about data usage limits, speed, and signal"
             },
-            NotificationChannel(CHANNEL_SPEEDTEST, "Speedtest Results", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "Speed test completion notifications"
+            NotificationChannel(
+                CHANNEL_CONNECTION,
+                "Connection Alerts",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Network disconnect and reconnect notifications"
             },
-            NotificationChannel(CHANNEL_NETWORK, "Network Status", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Network connection status changes"
-            },
-            NotificationChannel(CHANNEL_WIFI, "WiFi Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "WiFi signal and connection alerts"
+            NotificationChannel(
+                CHANNEL_ACHIEVEMENTS,
+                "Achievements",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Achievement unlock notifications"
             }
         )
         notificationManager.createNotificationChannels(channels)
     }
 
-    fun showUsageAlert(title: String, message: String, percentage: Float) {
-        val channelId = if (percentage >= 95f) CHANNEL_USAGE else CHANNEL_USAGE
-        val priority = if (percentage >= 95f) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT
+    private fun getMainIntent(): PendingIntent {
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            ?: Intent()
+        return PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
 
-        val notification = NotificationCompat.Builder(context, channelId)
+    private fun getNotificationBuilder(channelId: String): NotificationCompat.Builder {
+        return NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
+            .setAutoCancel(true)
+            .setContentIntent(getMainIntent())
+    }
+
+    fun showUsageAlert(title: String, message: String, type: String = "usage") {
+        val priority = when (type) {
+            "limit" -> NotificationCompat.PRIORITY_HIGH
+            "speed" -> NotificationCompat.PRIORITY_DEFAULT
+            "signal" -> NotificationCompat.PRIORITY_LOW
+            else -> NotificationCompat.PRIORITY_DEFAULT
+        }
+        val notification = getNotificationBuilder(CHANNEL_USAGE)
             .setContentTitle(title)
             .setContentText(message)
-            .setPriority(priority)
-            .setAutoCancel(true)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(priority)
             .build()
 
-        notificationManager.notify(NOTIFICATION_USAGE + System.currentTimeMillis().toInt(), notification)
+        notificationManager.notify(
+            NOTIFICATION_USAGE + System.currentTimeMillis().toInt(),
+            notification
+        )
     }
 
-    fun showSpeedTestResult(download: String, upload: String, ping: String) {
-        val notification = NotificationCompat.Builder(context, CHANNEL_SPEEDTEST)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Speed Test Complete")
-            .setContentText("↓ $download | ↑ $upload | Ping: $ping")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true)
-            .build()
-
-        notificationManager.notify(NOTIFICATION_SPEEDTEST, notification)
-    }
-
-    fun showNetworkAlert(title: String, message: String) {
-        val notification = NotificationCompat.Builder(context, CHANNEL_NETWORK)
-            .setSmallIcon(R.drawable.ic_notification)
+    fun showConnectionAlert(title: String, message: String) {
+        val notification = getNotificationBuilder(CHANNEL_CONNECTION)
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        notificationManager.notify(
+            NOTIFICATION_CONNECTION + System.currentTimeMillis().toInt(),
+            notification
+        )
+    }
+
+    fun showAchievement(title: String, message: String) {
+        val notification = getNotificationBuilder(CHANNEL_ACHIEVEMENTS)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setAutoCancel(true)
             .build()
 
-        notificationManager.notify(NOTIFICATION_NETWORK, notification)
+        notificationManager.notify(
+            NOTIFICATION_ACHIEVEMENT + System.currentTimeMillis().toInt(),
+            notification
+        )
     }
 
-    fun showWifiAlert(title: String, message: String) {
-        val notification = NotificationCompat.Builder(context, CHANNEL_WIFI)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
+    fun showLimitExceededNotification(used: Long, limit: Long, type: String) {
+        val percentage = if (limit > 0) (used.toFloat() / limit) * 100f else 0f
+        val usedStr = formatBytes(used)
+        val limitStr = formatBytes(limit)
+        val title = "${type.replaceFirstChar { it.uppercase() }} Limit Exceeded"
+        val message = "You've used $usedStr of $limitStr (${String.format("%.0f", percentage)}%)"
+        showUsageAlert(title, message, type = "limit")
+    }
 
-        notificationManager.notify(NOTIFICATION_WIFI + System.currentTimeMillis().toInt(), notification)
+    fun showLowSignalNotification(signalStrength: Int) {
+        val title = "Low WiFi Signal"
+        val message = "WiFi signal strength is $signalStrength% - consider moving closer to the router"
+        showUsageAlert(title, message, type = "signal")
+    }
+
+    fun showHighPingNotification(ping: Double) {
+        val title = "High Latency Detected"
+        val message = "Current ping is ${String.format("%.0f", ping)}ms - connection may be unstable"
+        showUsageAlert(title, message, type = "speed")
+    }
+
+    fun showLowSpeedNotification(speed: Double) {
+        val title = "Low Connection Speed"
+        val message = "Current speed is ${String.format("%.1f", speed)} Mbps - below expected threshold"
+        showUsageAlert(title, message, type = "speed")
     }
 
     fun showLimitWarning(type: String, currentBytes: Long, limitBytes: Long, percentage: Float) {
-        val usageFormatter = DataUsageMonitor(context)
-        val message = "${type.replaceFirstChar { it.uppercase() }} limit: ${usageFormatter.formatBytes(currentBytes)} / ${usageFormatter.formatBytes(limitBytes)} (${String.format("%.0f", percentage)}%)"
+        val currentStr = formatBytes(currentBytes)
+        val limitStr = formatBytes(limitBytes)
+        val message = "${type.replaceFirstChar { it.uppercase() }} limit: " +
+                "$currentStr / $limitStr (${String.format("%.0f", percentage)}%)"
         showUsageAlert(
-            title = "⚠️ ${type.replaceFirstChar { it.uppercase() }} Limit Warning",
+            title = "${type.replaceFirstChar { it.uppercase() }} Limit Warning",
             message = message,
-            percentage = percentage
+            type = "limit"
         )
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        val kb = bytes / 1024.0
+        if (kb < 1024) return String.format("%.1f KB", kb)
+        val mb = kb / 1024.0
+        if (mb < 1024) return String.format("%.1f MB", mb)
+        val gb = mb / 1024.0
+        return String.format("%.2f GB", gb)
     }
 
     fun cancelNotification(id: Int) {

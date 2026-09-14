@@ -1,32 +1,42 @@
 package pl.netbio.internetusageanalyzer.data.repository
 
 import kotlinx.coroutines.flow.Flow
-import pl.netbio.internetusageanalyzer.data.local.dao.SpeedTestDao
-import pl.netbio.internetusageanalyzer.data.local.entity.SpeedTestEntity
+import kotlinx.coroutines.flow.map
+import pl.netbio.internetusageanalyzer.data.local.dao.SpeedTestResultDao
+import pl.netbio.internetusageanalyzer.data.local.entity.SpeedTestResultEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SpeedTestRepository @Inject constructor(
-    private val speedTestDao: SpeedTestDao
+    private val speedTestResultDao: SpeedTestResultDao
 ) {
-    fun getAllTests(): Flow<List<SpeedTestEntity>> = speedTestDao.getAllTests()
 
-    fun getRecentTests(limit: Int): Flow<List<SpeedTestEntity>> = speedTestDao.getRecentTests(limit)
+    suspend fun insert(result: SpeedTestResultEntity) {
+        speedTestResultDao.insert(result)
+    }
 
-    fun getAverageDownload(start: Long, end: Long): Flow<Double?> = speedTestDao.getAverageDownload(start, end)
+    fun getAll(): Flow<List<SpeedTestResultEntity>> = speedTestResultDao.getAll()
 
-    fun getAverageUpload(start: Long, end: Long): Flow<Double?> = speedTestDao.getAverageUpload(start, end)
+    fun getRecent(limit: Int): Flow<List<SpeedTestResultEntity>> =
+        speedTestResultDao.getRecent(limit)
 
-    fun getAveragePing(start: Long, end: Long): Flow<Double?> = speedTestDao.getAveragePing(start, end)
+    fun getLatest(): Flow<SpeedTestResultEntity?> = speedTestResultDao.getLatest()
 
-    fun getLatestTest(): Flow<SpeedTestEntity?> = speedTestDao.getLatestTest()
+    fun getAverageSpeeds(): Flow<Triple<Double, Double, Double>> {
+        return speedTestResultDao.getAll().map { list ->
+            if (list.isEmpty()) {
+                Triple(0.0, 0.0, 0.0)
+            } else {
+                val avgDownload = list.map { it.downloadSpeed }.average()
+                val avgUpload = list.map { it.uploadSpeed }.average()
+                val avgPing = list.map { it.ping }.average()
+                Triple(avgDownload, avgUpload, avgPing)
+            }
+        }
+    }
 
-    fun getMaxDownload(): Flow<Double?> = speedTestDao.getMaxDownload()
-
-    fun getMinDownload(): Flow<Double?> = speedTestDao.getMinDownload()
-
-    suspend fun insertTest(test: SpeedTestEntity): Long = speedTestDao.insert(test)
-
-    suspend fun deleteAll() = speedTestDao.deleteAll()
+    suspend fun deleteOld(cutoffDate: Long) {
+        speedTestResultDao.deleteOld(cutoffDate)
+    }
 }

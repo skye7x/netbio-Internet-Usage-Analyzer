@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,36 +35,31 @@ fun ExportScreen(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = TextPrimary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary)
                 }
                 Text("Export Data", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold), color = TextPrimary)
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            uiState.error?.let { error ->
-                GlassAlert(title = "Error", message = error, type = GlassAlertType.Error, onDismiss = { viewModel.clearError() })
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
             GlassCard(modifier = Modifier.fillMaxWidth()) {
-                GlassSectionHeader(title = "Usage Data")
+                GlassSectionHeader(title = "Export Format")
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     GlassButton(
                         text = "CSV",
-                        onClick = { viewModel.exportUsageCsv() },
+                        onClick = { viewModel.setFormat(ExportFormat.CSV) },
                         icon = Icons.Default.TableChart,
                         modifier = Modifier.weight(1f),
-                        enabled = !uiState.isExporting
+                        color = if (uiState.exportFormat == ExportFormat.CSV) AccentBlue else GlassHigh
                     )
                     GlassButton(
                         text = "JSON",
-                        onClick = { viewModel.exportUsageJson() },
+                        onClick = { viewModel.setFormat(ExportFormat.JSON) },
                         icon = Icons.Default.Code,
                         modifier = Modifier.weight(1f),
-                        enabled = !uiState.isExporting
+                        color = if (uiState.exportFormat == ExportFormat.JSON) AccentBlue else GlassHigh
                     )
                 }
             }
@@ -71,31 +67,24 @@ fun ExportScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
-                GlassSectionHeader(title = "Speed Test Data")
-                Spacer(modifier = Modifier.height(12.dp))
-
-                GlassButton(
-                    text = "Export Speed Tests (CSV)",
-                    onClick = { viewModel.exportSpeedTestsCsv() },
-                    icon = Icons.Default.Speed,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isExporting
-                )
+                GlassSectionHeader(title = "Date Range")
+                Spacer(modifier = Modifier.height(8.dp))
+                GlassMetricRow(label = "Start", value = uiState.exportDateRange.first.ifEmpty { "Not set" }, icon = Icons.Default.CalendarToday)
+                HorizontalDivider(color = GlassHigh)
+                GlassMetricRow(label = "End", value = uiState.exportDateRange.second.ifEmpty { "Not set" }, icon = Icons.Default.CalendarToday)
+                HorizontalDivider(color = GlassHigh)
+                GlassMetricRow(label = "Format", value = uiState.exportFormat.name, icon = Icons.Default.Description)
             }
 
-            if (uiState.exportedFile != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    GlassSectionHeader(title = "Export Ready", subtitle = uiState.exportedFile!!.name)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    GlassButton(
-                        text = "Share File",
-                        onClick = { viewModel.shareFile() },
-                        icon = Icons.Default.Share,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            GlassButton(
+                text = "Export Data",
+                onClick = { viewModel.exportData() },
+                icon = Icons.Default.FileDownload,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isExporting
+            )
 
             if (uiState.isExporting) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -103,6 +92,23 @@ fun ExportScreen(
                     CircularProgressIndicator(color = AccentBlue)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Exporting...", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                }
+            }
+
+            if (uiState.lastExportPath.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    GlassSectionHeader(title = "Export Ready")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    GlassMetricRow(label = "File", value = uiState.lastExportPath.substringAfterLast("/"), icon = Icons.Default.Description)
+                    GlassMetricRow(label = "Format", value = uiState.exportFormat.name, icon = Icons.Default.TableChart)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    GlassButton(
+                        text = "Share File",
+                        onClick = { viewModel.shareExport() },
+                        icon = Icons.Default.Share,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 

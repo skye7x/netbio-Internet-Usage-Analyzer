@@ -2,6 +2,7 @@ package pl.netbio.internetusageanalyzer.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,11 +14,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,10 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
@@ -39,50 +37,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import pl.netbio.internetusageanalyzer.ui.theme.*
 
-val GlassBackground = Color.White.copy(alpha = 0.06f)
-val GlassBackgroundHover = Color.White.copy(alpha = 0.10f)
-val GlassBorder = Brush.linearGradient(
-    colors = listOf(
-        Color.White.copy(alpha = 0.08f),
-        Color.White.copy(alpha = 0.22f),
-        Color.White.copy(alpha = 0.90f)
-    ),
-    start = Offset(0f, Float.POSITIVE_INFINITY),
-    end = Offset(Float.POSITIVE_INFINITY, 0f)
-)
-val GlassBorderSubtle = Brush.linearGradient(
-    colors = listOf(
-        Color.White.copy(alpha = 0.05f),
-        Color.White.copy(alpha = 0.15f),
-        Color.White.copy(alpha = 0.60f)
-    ),
-    start = Offset(0f, Float.POSITIVE_INFINITY),
-    end = Offset(Float.POSITIVE_INFINITY, 0f)
-)
-val GlassGradientFill = Brush.horizontalGradient(
-    colors = listOf(AccentBlue, AccentPurple)
-)
-val GlassActiveGradient = Brush.linearGradient(
-    colors = listOf(Color.White, Color.White.copy(alpha = 0.5f))
-)
+val GlassCardShape = RoundedCornerShape(20.dp)
+val PillShape = RoundedCornerShape(999.dp)
 
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 24.dp,
-    padding: Dp = 24.dp,
+    cornerRadius: Dp = 20.dp,
+    padding: Dp = 20.dp,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = RoundedCornerShape(cornerRadius)
     Column(
         modifier = modifier
-            .shadow(
-                elevation = 16.dp,
-                shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.35f),
-                spotColor = Color.Black.copy(alpha = 0.35f)
-            )
+            .shadow(elevation = 8.dp, shape = shape, ambientColor = Color.Black.copy(alpha = 0.5f))
             .clip(shape)
             .then(
                 if (onClick != null) Modifier.clickable(
@@ -91,7 +60,7 @@ fun GlassCard(
                     onClick = onClick
                 ) else Modifier
             )
-            .background(GlassBackground)
+            .background(GlassMid)
             .border(1.dp, GlassBorder, shape)
             .padding(padding),
         content = content
@@ -109,15 +78,10 @@ fun GlassStatCard(
     iconTint: Color = AccentBlue,
     onClick: (() -> Unit)? = null
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(16.dp)
     Column(
         modifier = modifier
-            .shadow(
-                elevation = 12.dp,
-                shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.30f),
-                spotColor = Color.Black.copy(alpha = 0.30f)
-            )
+            .shadow(elevation = 4.dp, shape = shape, ambientColor = Color.Black.copy(alpha = 0.4f))
             .clip(shape)
             .then(
                 if (onClick != null) Modifier.clickable(
@@ -126,49 +90,40 @@ fun GlassStatCard(
                     onClick = onClick
                 ) else Modifier
             )
-            .background(GlassBackground)
+            .background(GlassMid)
             .border(1.dp, GlassBorder, shape)
-            .padding(20.dp)
+            .padding(16.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
             if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(20.dp)
-                )
+                Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextTertiary
-            )
+            Text(text = label, style = MaterialTheme.typography.bodySmall, color = TextTertiary)
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
             color = TextPrimary
         )
         if (delta != null) {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (deltaPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                     contentDescription = null,
-                    tint = if (deltaPositive) SuccessGreen else ErrorRed,
+                    tint = if (deltaPositive) ErrorRed else SuccessGreen,
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = delta,
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (deltaPositive) SuccessGreen else ErrorRed
+                    color = if (deltaPositive) ErrorRed else SuccessGreen
                 )
             }
         }
@@ -181,49 +136,25 @@ fun GlassProgressBar(
     progress: Float,
     label: String = "",
     percentageText: String = "",
-    trackHeight: Dp = 12.dp,
-    gradientBrush: Brush = GlassGradientFill
+    trackHeight: Dp = 10.dp,
+    fillColor: Color = AccentBlue
 ) {
-    val shape = RoundedCornerShape(999.dp)
+    val shape = PillShape
     Column(modifier = modifier) {
         if (label.isNotEmpty() || percentageText.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
-                Text(
-                    text = percentageText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = label, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(text = percentageText, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(trackHeight)
-                .clip(shape)
-                .background(GlassBackground)
-                .border(1.dp, GlassBorderSubtle, shape)
+            modifier = Modifier.fillMaxWidth().height(trackHeight).clip(shape)
+                .background(GlassLow).border(1.dp, GlassBorder, shape)
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(fraction = progress.coerceIn(0f, 1f))
-                    .clip(shape)
-                    .background(gradientBrush)
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = shape,
-                        ambientColor = AccentBlue.copy(alpha = 0.4f),
-                        spotColor = AccentBlue.copy(alpha = 0.4f)
-                    )
+                modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = progress.coerceIn(0f, 1f))
+                    .clip(shape).background(fillColor)
             )
         }
     }
@@ -237,37 +168,23 @@ fun GlassCircularProgress(
     strokeWidth: Dp = 10.dp,
     label: String = "",
     value: String = "",
-    gradientBrush: Brush = GlassGradientFill
+    fillColor: Color = AccentBlue
 ) {
-    val shape = CircleShape
-    Box(
-        modifier = modifier.size(size),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
             progress = { progress },
             modifier = Modifier.fillMaxSize(),
-            color = AccentBlue,
-            trackColor = GlassBackground,
+            color = fillColor,
+            trackColor = GlassLow,
             strokeWidth = strokeWidth,
             strokeCap = StrokeCap.Round
         )
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (value.isNotEmpty()) {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary
-                )
+                Text(text = value, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = TextPrimary)
             }
             if (label.isNotEmpty()) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextTertiary
-                )
+                Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextTertiary)
             }
         }
     }
@@ -280,84 +197,41 @@ fun GlassBottomNavigation(
     selectedItem: Int,
     onItemClick: (Int) -> Unit
 ) {
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(24.dp)
     Box(
-        modifier = modifier
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .shadow(
-                elevation = 16.dp,
-                shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.45f),
-                spotColor = Color.Black.copy(alpha = 0.45f)
-            )
-            .clip(shape)
-            .background(Color.Black.copy(alpha = 0.45f))
+        modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            .shadow(elevation = 12.dp, shape = shape, ambientColor = Color.Black.copy(alpha = 0.6f))
+            .clip(shape).background(DarkCard.copy(alpha = 0.95f))
             .border(1.dp, GlassBorder, shape)
-            .padding(horizontal = 8.dp, vertical = 10.dp)
+            .padding(horizontal = 6.dp, vertical = 8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             items.forEachIndexed { index, item ->
-                GlassNavItemView(
-                    item = item,
-                    isSelected = selectedItem == index,
-                    onClick = { onItemClick(index) }
-                )
+                GlassNavItemView(item = item, isSelected = selectedItem == index, onClick = { onItemClick(index) })
             }
         }
     }
 }
 
 @Composable
-private fun GlassNavItemView(
-    item: GlassNavItem,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val bgColor by animateColorAsState(
-        targetValue = if (isSelected) Color.White else Color.Transparent,
-        animationSpec = tween(200)
-    )
-    val contentColor by animateColorAsState(
-        targetValue = if (isSelected) Color(0xFF1A1A1A) else TextTertiary,
-        animationSpec = tween(200)
-    )
-    val shape = RoundedCornerShape(18.dp)
+private fun GlassNavItemView(item: GlassNavItem, isSelected: Boolean, onClick: () -> Unit) {
+    val bgColor by animateColorAsState(targetValue = if (isSelected) AccentBlue.copy(alpha = 0.15f) else Color.Transparent, animationSpec = tween(200))
+    val contentColor by animateColorAsState(targetValue = if (isSelected) AccentBlue else TextTertiary, animationSpec = tween(200))
+    val shape = RoundedCornerShape(14.dp)
 
     Column(
-        modifier = Modifier
-            .clip(shape)
-            .background(bgColor)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        modifier = Modifier.clip(shape).background(bgColor)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = item.label,
-            tint = contentColor,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = item.label,
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = contentColor
-        )
+        Icon(imageVector = item.icon, contentDescription = item.label, tint = contentColor, modifier = Modifier.size(22.dp))
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(text = item.label, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = contentColor)
     }
 }
 
-data class GlassNavItem(
-    val icon: ImageVector,
-    val label: String
-)
+data class GlassNavItem(val icon: ImageVector, val label: String)
 
 @Composable
 fun GlassTabBar(
@@ -366,44 +240,22 @@ fun GlassTabBar(
     selectedIndex: Int,
     onSelect: (Int) -> Unit
 ) {
-    val shape = RoundedCornerShape(999.dp)
+    val shape = PillShape
     Box(
-        modifier = modifier
-            .clip(shape)
-            .background(Color.Black.copy(alpha = 0.3f))
-            .border(1.dp, GlassBorder, shape)
-            .padding(5.dp)
+        modifier = modifier.clip(shape).background(GlassLow).border(1.dp, GlassBorder, shape).padding(3.dp)
     ) {
         Row {
             items.forEachIndexed { index, label ->
                 val isSelected = selectedIndex == index
-                val bgColor by animateColorAsState(
-                    targetValue = if (isSelected) Color.White else Color.Transparent,
-                    animationSpec = tween(200)
-                )
-                val textColor by animateColorAsState(
-                    targetValue = if (isSelected) Color(0xFF1A1A1A) else TextTertiary,
-                    animationSpec = tween(200)
-                )
-                val pillShape = RoundedCornerShape(999.dp)
-
+                val bgColor by animateColorAsState(targetValue = if (isSelected) AccentBlue.copy(alpha = 0.2f) else Color.Transparent, animationSpec = tween(200))
+                val textColor by animateColorAsState(targetValue = if (isSelected) AccentBlue else TextTertiary, animationSpec = tween(200))
                 Box(
-                    modifier = Modifier
-                        .clip(pillShape)
-                        .background(bgColor)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { onSelect(index) }
-                        )
-                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                    modifier = Modifier.clip(PillShape).background(bgColor)
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { onSelect(index) })
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = textColor
-                    )
+                    Text(text = label, style = MaterialTheme.typography.labelMedium, color = textColor)
                 }
             }
         }
@@ -411,41 +263,19 @@ fun GlassTabBar(
 }
 
 @Composable
-fun GlassToggle(
-    modifier: Modifier = Modifier,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    val shape = RoundedCornerShape(999.dp)
-    val trackColor by animateColorAsState(
-        targetValue = if (checked) AccentGreen.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.35f),
-        animationSpec = tween(250)
-    )
-    val knobOffset by animateFloatAsState(
-        targetValue = if (checked) 28f else 0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-    )
+fun GlassToggle(modifier: Modifier = Modifier, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val trackColor by animateColorAsState(targetValue = if (checked) AccentBlue else GlassHigh, animationSpec = tween(250))
+    val knobOffset by animateFloatAsState(targetValue = if (checked) 28f else 0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
 
     Box(
-        modifier = modifier
-            .size(width = 64.dp, height = 36.dp)
-            .clip(shape)
-            .background(trackColor)
-            .border(1.dp, GlassBorder, shape)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = { onCheckedChange(!checked) }
-            ),
+        modifier = modifier.size(width = 56.dp, height = 32.dp).clip(PillShape).background(trackColor)
+            .border(1.dp, GlassBorder, PillShape)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { onCheckedChange(!checked) }),
         contentAlignment = Alignment.CenterStart
     ) {
         Box(
-            modifier = Modifier
-                .offset(x = (3 + knobOffset).dp)
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(Color.White)
-                .shadow(4.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.4f))
+            modifier = Modifier.offset(x = (3 + knobOffset).dp).size(26.dp).clip(CircleShape)
+                .background(TextPrimary).shadow(4.dp, CircleShape)
         )
     }
 }
@@ -456,42 +286,26 @@ fun GlassButton(
     text: String,
     onClick: () -> Unit,
     icon: ImageVector? = null,
-    gradient: Brush = GlassGradientFill,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    color: Color = AccentBlue
 ) {
-    val shape = RoundedCornerShape(999.dp)
+    val shape = PillShape
     val alpha = if (enabled) 1f else 0.5f
 
     Box(
-        modifier = modifier
-            .graphicsLayer(alpha = alpha)
-            .shadow(8.dp, shape, ambientColor = AccentBlue.copy(alpha = 0.3f))
-            .clip(shape)
-            .background(gradient)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                enabled = enabled,
-                onClick = onClick
-            )
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+        modifier = modifier.graphicsLayer(alpha = alpha)
+            .shadow(6.dp, shape, ambientColor = color.copy(alpha = 0.2f))
+            .clip(shape).background(color)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, enabled = enabled, onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = Color(0xFF1A1A1A),
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+                Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
             }
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = Color(0xFF1A1A1A)
-            )
+            Text(text = text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
         }
     }
 }
@@ -505,44 +319,22 @@ fun GlassChip(
     icon: ImageVector? = null,
     tint: Color = AccentBlue
 ) {
-    val shape = RoundedCornerShape(999.dp)
-    val bgColor by animateColorAsState(
-        targetValue = if (selected) tint.copy(alpha = 0.2f) else GlassBackground,
-        animationSpec = tween(200)
-    )
-    val textColor by animateColorAsState(
-        targetValue = if (selected) tint else TextSecondary,
-        animationSpec = tween(200)
-    )
+    val bgColor by animateColorAsState(targetValue = if (selected) tint.copy(alpha = 0.15f) else GlassLow, animationSpec = tween(200))
+    val textColor by animateColorAsState(targetValue = if (selected) tint else TextSecondary, animationSpec = tween(200))
+    val borderColor by animateColorAsState(targetValue = if (selected) tint.copy(alpha = 0.3f) else GlassBorder, animationSpec = tween(200))
 
     Box(
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor)
-            .border(1.dp, if (selected) SolidColor(tint.copy(alpha = 0.3f)) else GlassBorderSubtle, shape)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
+        modifier = modifier.clip(PillShape).background(bgColor).border(1.dp, borderColor, PillShape)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = textColor,
-                    modifier = Modifier.size(16.dp)
-                )
+                Icon(imageVector = icon, contentDescription = null, tint = textColor, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
             }
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                color = textColor
-            )
+            Text(text = text, style = MaterialTheme.typography.labelMedium, color = textColor)
         }
     }
 }
@@ -557,43 +349,26 @@ fun GlassInput(
     trailingIcon: ImageVector? = null,
     onTrailingClick: (() -> Unit)? = null
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(12.dp)
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(GlassBackground)
-            .border(1.dp, GlassBorderSubtle, shape)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+        modifier = modifier.fillMaxWidth().clip(shape).background(GlassLow)
+            .border(1.dp, GlassBorder, shape).padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (leadingIcon != null) {
-            Icon(
-                imageVector = leadingIcon,
-                contentDescription = null,
-                tint = TextTertiary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
+            Icon(imageVector = leadingIcon, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(10.dp))
         }
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
-            textStyle = TextStyle(
-                color = TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Normal
-            ),
+            textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
             cursorBrush = SolidColor(AccentBlue),
             singleLine = true,
             decorationBox = { innerTextField ->
                 if (value.isEmpty() && placeholder.isNotEmpty()) {
-                    Text(
-                        text = placeholder,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextDisabled
-                    )
+                    Text(text = placeholder, style = MaterialTheme.typography.bodyMedium, color = TextDisabled)
                 }
                 innerTextField()
             }
@@ -601,18 +376,10 @@ fun GlassInput(
         if (trailingIcon != null) {
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
-                imageVector = trailingIcon,
-                contentDescription = null,
-                tint = TextTertiary,
-                modifier = Modifier
-                    .size(20.dp)
-                    .then(
-                        if (onTrailingClick != null) Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onTrailingClick
-                        ) else Modifier
-                    )
+                imageVector = trailingIcon, contentDescription = null, tint = TextTertiary,
+                modifier = Modifier.size(18.dp).then(
+                    if (onTrailingClick != null) Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTrailingClick) else Modifier
+                )
             )
         }
     }
@@ -627,68 +394,37 @@ fun GlassAlert(
     icon: ImageVector? = null,
     onDismiss: (() -> Unit)? = null
 ) {
-    val shape = RoundedCornerShape(20.dp)
-    val (accentColor, bgColor) = when (type) {
-        GlassAlertType.Success -> SuccessGreen to SuccessGreen.copy(alpha = 0.1f)
-        GlassAlertType.Warning -> WarningOrange to WarningOrange.copy(alpha = 0.1f)
-        GlassAlertType.Error -> ErrorRed to ErrorRed.copy(alpha = 0.1f)
-        GlassAlertType.Info -> InfoBlue to InfoBlue.copy(alpha = 0.1f)
+    val shape = RoundedCornerShape(14.dp)
+    val accentColor = when (type) {
+        GlassAlertType.Success -> SuccessGreen
+        GlassAlertType.Warning -> WarningOrange
+        GlassAlertType.Error -> ErrorRed
+        GlassAlertType.Info -> InfoBlue
     }
+    val bgColor = accentColor.copy(alpha = 0.08f)
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(bgColor)
-            .border(1.dp, accentColor.copy(alpha = 0.3f), shape)
-            .padding(16.dp)
+        modifier = modifier.fillMaxWidth().clip(shape).background(bgColor)
+            .border(1.dp, accentColor.copy(alpha = 0.2f), shape).padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon ?: when (type) {
-                    GlassAlertType.Success -> Icons.Default.CheckCircle
-                    GlassAlertType.Warning -> Icons.Default.Warning
-                    GlassAlertType.Error -> Icons.Default.Error
-                    GlassAlertType.Info -> Icons.Default.Info
-                },
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = TextPrimary,
-                modifier = Modifier.weight(1f)
-            )
+            if (icon != null) {
+                Icon(imageVector = icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(10.dp))
+            }
+            Text(text = title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = TextPrimary, modifier = Modifier.weight(1f))
             if (onDismiss != null) {
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.size(20.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Dismiss",
-                        tint = TextTertiary,
-                        modifier = Modifier.size(16.dp)
-                    )
+                IconButton(onClick = onDismiss, modifier = Modifier.size(20.dp)) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Dismiss", tint = TextTertiary, modifier = Modifier.size(14.dp))
                 }
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary,
-            modifier = Modifier.padding(start = 30.dp)
-        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(text = message, style = MaterialTheme.typography.bodySmall, color = TextSecondary, modifier = Modifier.padding(start = 28.dp))
     }
 }
 
-enum class GlassAlertType {
-    Success, Warning, Error, Info
-}
+enum class GlassAlertType { Success, Warning, Error, Info }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -701,29 +437,15 @@ fun GlassBottomSheet(
     if (visible) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
-            containerColor = Color.Transparent,
+            containerColor = DarkCard,
             scrimColor = Color.Black.copy(alpha = 0.6f),
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             dragHandle = {
-                Box(
-                    modifier = Modifier
-                        .padding(top = 12.dp)
-                        .size(width = 36.dp, height = 4.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(GlassWhite40)
-                )
+                Box(modifier = Modifier.padding(top = 12.dp).size(width = 36.dp, height = 4.dp).clip(PillShape).background(GlassHigh))
             },
             modifier = modifier
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .background(DarkCard)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .padding(24.dp),
-                content = content
-            )
+            Column(modifier = Modifier.fillMaxWidth().padding(20.dp), content = content)
         }
     }
 }
@@ -735,29 +457,15 @@ fun GlassSectionHeader(
     subtitle: String? = null,
     action: (@Composable () -> Unit)? = null
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = TextPrimary
-            )
+            Text(text = title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = TextPrimary)
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextTertiary
-                )
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = TextTertiary)
             }
         }
-        if (action != null) {
-            action()
-        }
+        if (action != null) { action() }
     }
 }
 
@@ -772,49 +480,26 @@ fun GlassListItem(
     onClick: () -> Unit = {}
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
-            .padding(vertical = 12.dp),
+        modifier = modifier.fillMaxWidth()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(iconTint.copy(alpha = 0.15f)),
+            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(iconTint.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(20.dp)
-            )
+            Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(18.dp))
         }
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = TextPrimary
-            )
+            Text(text = title, style = MaterialTheme.typography.titleSmall, color = TextPrimary)
             if (subtitle != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextTertiary
-                )
+                Spacer(modifier = Modifier.height(1.dp))
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = TextTertiary)
             }
         }
-        if (trailing != null) {
-            trailing()
-        }
+        if (trailing != null) { trailing() }
     }
 }
 
@@ -822,32 +507,74 @@ fun GlassListItem(
 fun GlassGlowBackground(modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
         Box(
-            modifier = Modifier
-                .size(300.dp)
-                .offset(x = (-50).dp, y = (-50).dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            GradientStart.copy(alpha = 0.6f),
-                            Color.Transparent
-                        ),
-                        radius = 300f
-                    )
-                )
+            modifier = Modifier.size(250.dp).offset(x = (-60).dp, y = (-60).dp)
+                .background(Color(0xFF3B82F6).copy(alpha = 0.04f), CircleShape)
         )
         Box(
-            modifier = Modifier
-                .size(250.dp)
-                .offset(x = 200.dp, y = 400.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            AccentPurple.copy(alpha = 0.3f),
-                            Color.Transparent
-                        ),
-                        radius = 250f
-                    )
-                )
+            modifier = Modifier.size(200.dp).offset(x = 250.dp, y = 500.dp)
+                .background(Color(0xFFA855F7).copy(alpha = 0.03f), CircleShape)
         )
     }
 }
+
+@Composable
+fun GlassMetricRow(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    icon: ImageVector? = null,
+    iconTint: Color = AccentBlue
+) {
+    Row(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) {
+            Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.weight(1f))
+        Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = TextPrimary)
+    }
+}
+
+@Composable
+fun UsageBarChart(
+    modifier: Modifier = Modifier,
+    data: List<Pair<String, Float>>,
+    maxValue: Float,
+    barColor: Color = AccentBlue,
+    labelColor: Color = TextTertiary
+) {
+    val shape = RoundedCornerShape(4.dp)
+    Column(modifier = modifier) {
+        data.forEach { (label, value) ->
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = label, style = MaterialTheme.typography.labelSmall, color = labelColor, modifier = Modifier.width(36.dp))
+                Box(modifier = Modifier.weight(1f).height(14.dp).clip(shape).background(GlassLow)) {
+                    Box(
+                        modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = if (maxValue > 0) (value / maxValue).coerceIn(0f, 1f) else 0f)
+                            .clip(shape).background(barColor)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = String.format("%.1f", value), style = MaterialTheme.typography.labelSmall, color = TextSecondary, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
+            }
+        }
+    }
+}
+
+@Composable
+fun GlassPieChart(
+    modifier: Modifier = Modifier,
+    segments: List<PieSegment>,
+    size: Dp = 120.dp
+) {
+    Canvas(modifier = modifier.size(size)) {
+        var startAngle = -90f
+        segments.forEach { segment ->
+            val sweep = (segment.value / segments.sumOf { it.value.toDouble() }).toFloat() * 360f
+            drawArc(color = segment.color, startAngle = startAngle, sweepAngle = sweep, useCenter = true, topLeft = Offset.Zero, size = Size(this.size.width, this.size.height))
+            startAngle += sweep
+        }
+    }
+}
+
+data class PieSegment(val value: Float, val color: Color, val label: String = "")

@@ -1,23 +1,24 @@
 package pl.netbio.internetusageanalyzer.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import pl.netbio.internetusageanalyzer.data.local.entity.AchievementEntity
 
 @Dao
 interface AchievementDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(achievement: AchievementEntity): Long
 
-    @Update
-    suspend fun update(achievement: AchievementEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdate(achievement: AchievementEntity)
 
     @Query("SELECT * FROM achievements ORDER BY id ASC")
-    fun getAllAchievements(): Flow<List<AchievementEntity>>
+    fun getAll(): Flow<List<AchievementEntity>>
 
-    @Query("SELECT * FROM achievements WHERE isUnlocked = 1")
-    fun getUnlockedAchievements(): Flow<List<AchievementEntity>>
+    @Query("SELECT * FROM achievements WHERE id = :id")
+    fun getById(id: String): Flow<AchievementEntity?>
 
-    @Query("SELECT COUNT(*) FROM achievements WHERE isUnlocked = 1")
-    fun getUnlockedCount(): Flow<Int>
+    @Query("SELECT * FROM achievements WHERE isUnlocked = 1 ORDER BY unlockedAt DESC")
+    fun getUnlocked(): Flow<List<AchievementEntity>>
 }

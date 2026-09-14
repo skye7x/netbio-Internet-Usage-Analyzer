@@ -10,11 +10,14 @@ import javax.inject.Singleton
 class DiagnosticRepository @Inject constructor(
     private val diagnosticDao: DiagnosticDao
 ) {
-    fun getAllDiagnostics(): Flow<List<DiagnosticEntity>> = diagnosticDao.getAllDiagnostics()
 
-    fun getDiagnosticsByType(type: String): Flow<List<DiagnosticEntity>> = diagnosticDao.getDiagnosticsByType(type)
+    suspend fun insert(entity: DiagnosticEntity) {
+        diagnosticDao.insert(entity)
+    }
 
-    fun getRecentDiagnostics(limit: Int): Flow<List<DiagnosticEntity>> = diagnosticDao.getRecentDiagnostics(limit)
+    fun getAll(): Flow<List<DiagnosticEntity>> = diagnosticDao.getAll()
 
-    suspend fun insertDiagnostic(diagnostic: DiagnosticEntity): Long = diagnosticDao.insert(diagnostic)
+    fun getByType(type: String): Flow<List<DiagnosticEntity>> = diagnosticDao.getByType(type)
+
+    fun getLatest(): Flow<DiagnosticEntity?> = diagnosticDao.getLatest()
 }

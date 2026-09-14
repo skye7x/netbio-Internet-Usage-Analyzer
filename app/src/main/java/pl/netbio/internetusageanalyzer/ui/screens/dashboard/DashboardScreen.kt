@@ -1,18 +1,15 @@
 package pl.netbio.internetusageanalyzer.ui.screens.dashboard
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,14 +40,17 @@ fun DashboardScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("NetBio", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold), color = TextPrimary)
+                    Text(
+                        "NetBio",
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                        color = TextPrimary
+                    )
                     Text("Internet Usage Analyzer", style = MaterialTheme.typography.bodySmall, color = TextTertiary)
                 }
                 Row {
@@ -73,7 +73,6 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Today's Usage - Main Card
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     GlassSectionHeader(title = "Today's Usage", subtitle = "Real-time monitoring")
@@ -105,7 +104,6 @@ fun DashboardScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // WiFi vs Mobile breakdown
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         GlassStatCard(
                             modifier = Modifier.weight(1f),
@@ -127,11 +125,10 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Daily Limit Progress
             if (uiState.dailyLimit > 0) {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     GlassProgressBar(
-                        progress = uiState.dailyLimitPercentage / 100f,
+                        progress = (uiState.dailyLimitPercentage / 100f).coerceIn(0f, 1f),
                         label = "Daily Limit",
                         percentageText = "${String.format("%.0f", uiState.dailyLimitPercentage)}%"
                     )
@@ -145,7 +142,6 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Stat Cards Row 1
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlassStatCard(
                     modifier = Modifier.weight(1f),
@@ -165,41 +161,101 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Stat Cards Row 2
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                GlassStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Download",
-                    value = viewModel.formatSpeed(uiState.currentDownloadSpeed),
-                    icon = Icons.Default.ArrowDownward,
-                    iconTint = AccentGreen
-                )
-                GlassStatCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Upload",
-                    value = viewModel.formatSpeed(uiState.currentUploadSpeed),
-                    icon = Icons.Default.ArrowUpward,
-                    iconTint = AccentBlue
-                )
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                GlassSectionHeader(title = "Real-Time Speed")
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    GlassStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = "Download",
+                        value = viewModel.formatSpeed(uiState.currentDownloadSpeed),
+                        icon = Icons.Default.ArrowDownward,
+                        iconTint = AccentGreen
+                    )
+                    GlassStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = "Upload",
+                        value = viewModel.formatSpeed(uiState.currentUploadSpeed),
+                        icon = Icons.Default.ArrowUpward,
+                        iconTint = AccentBlue
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Prediction
+            if (uiState.hourlyUsage.isNotEmpty()) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    GlassSectionHeader(title = "Hourly Usage", subtitle = "Today")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val maxHourly = uiState.hourlyUsage.maxOfOrNull { it.second } ?: 1L
+                    uiState.hourlyUsage.forEach { (hour, bytes) ->
+                        GlassMetricRow(
+                            label = "${String.format("%02d", hour)}:00",
+                            value = viewModel.formatBytes(bytes),
+                            icon = Icons.Default.AccessTime,
+                            iconTint = AccentBlue
+                        )
+                        GlassProgressBar(
+                            progress = if (maxHourly > 0) (bytes.toFloat() / maxHourly).coerceIn(0f, 1f) else 0f,
+                            trackHeight = 6.dp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             if (uiState.predictedMonthlyUsage > 0) {
+                val currentMonthUsage = uiState.monthUsage
+                val predictedPct = if (currentMonthUsage > 0) {
+                    ((uiState.predictedMonthlyUsage.toFloat() / currentMonthUsage.toFloat()) * 100f).toInt()
+                } else 0
+
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     GlassSectionHeader(title = "Monthly Prediction", subtitle = "Based on current usage")
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = viewModel.formatBytes(uiState.predictedMonthlyUsage.toLong()),
+                        text = viewModel.formatBytes(uiState.predictedMonthlyUsage),
                         style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                         color = AccentPurple
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Predicted ${predictedPct}% of current month usage",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextTertiary
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Quick Actions
+            if (uiState.weeklyDailyUsage.isNotEmpty()) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    GlassSectionHeader(title = "Weekly Comparison", subtitle = "Mon - Sun")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val maxWeekly = uiState.weeklyDailyUsage.maxOfOrNull { it.second } ?: 1L
+                    UsageBarChart(
+                        data = uiState.weeklyDailyUsage.map { (day, bytes) ->
+                            day to (bytes / (1024.0 * 1024)).toFloat()
+                        },
+                        maxValue = (maxWeekly / (1024.0 * 1024)).toFloat(),
+                        barColor = AccentPurple
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (uiState.anomalyScore > 0.3f) {
+                GlassAlert(
+                    title = "Usage Anomaly Detected",
+                    message = "Your current usage pattern is ${String.format("%.0f", uiState.anomalyScore * 100)}% higher than normal.",
+                    type = GlassAlertType.Warning,
+                    icon = Icons.Default.Warning
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 GlassSectionHeader(title = "Quick Actions")
                 Spacer(modifier = Modifier.height(12.dp))

@@ -3,68 +3,147 @@ package pl.netbio.internetusageanalyzer.ui.screens.wifi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pl.netbio.internetusageanalyzer.data.local.entity.NetworkInfoEntity
-import pl.netbio.internetusageanalyzer.data.repository.NetworkRepository
+import pl.netbio.internetusageanalyzer.data.repository.NetworkInfoRepository
 import pl.netbio.internetusageanalyzer.service.NetworkMonitor
-import pl.netbio.internetusageanalyzer.service.WifiInfoData
 import javax.inject.Inject
+
+data class WifiInfoData(
+    val ssid: String,
+    val bssid: String,
+    val ipAddress: String,
+    val linkSpeed: Int,
+    val frequency: Int,
+    val rssi: Int
+)
+
+data class WifiUiState(
+    val isConnected: Boolean = false,
+    val networkType: String = "None",
+    val wifiInfo: WifiInfoData? = null,
+    val signalStrength: Int = 0,
+    val linkSpeed: Int = 0,
+    val frequency: Int = 0,
+    val connectionQuality: String = "Unknown",
+    val networkHistory: List<NetworkInfoEntity> = emptyList(),
+    val distinctNetworks: List<String> = emptyList()
+)
 
 @HiltViewModel
 class WifiViewModel @Inject constructor(
     private val networkMonitor: NetworkMonitor,
-    private val networkRepository: NetworkRepository
+    private val networkInfoRepository: NetworkInfoRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WifiUiState())
     val uiState: StateFlow<WifiUiState> = _uiState.asStateFlow()
 
-    val isConnected = networkMonitor.isConnected
-    val networkType = networkMonitor.networkType
-    val wifiInfo = networkMonitor.wifiInfo
-    val signalStrength = networkMonitor.signalStrength
-    val linkSpeed = networkMonitor.linkSpeed
-    val frequency = networkMonitor.frequency
-
     init {
+        collectNetworkState()
+        collectNetworkHistory()
+    }
+
+    private fun collectNetworkState() {
         viewModelScope.launch {
-            combine(networkMonitor.wifiInfo, networkMonitor.signalStrength, networkMonitor.linkSpeed, networkMonitor.frequency) { info, signal, speed, freq ->
-                WifiUiState(
-                    wifiInfo = info,
-                    signalStrength = signal,
-                    linkSpeed = speed,
-                    frequency = freq,
-                    frequencyBand = networkMonitor.getFrequencyBand(freq),
-                    signalDescription = networkMonitor.getSignalLevelDescription(-(100 - signal))
-                )
-            }.collect { state -> _uiState.value = state }
-        }
-        viewModelScope.launch {
-            networkRepository.getLatestNetworkInfo().collect { info ->
-                _uiState.value = _uiState.value.copy(lastSavedInfo = info)
+            combine(
+                networkMonitor.isConnected,
+                networkMonitor.networkType,
+                networkMonitor.wifiInfo,
+                networkMonitor.signalStrength,
+                networkMonitor.linkSpeed,
+                networkMonitor.frequency
+            ) { values ->
+                val connected = values[0] as Boolean
+                val type = values[1] as String
+                val wifi = values[2] as? pl.netbio.internetusageanalyzer.service.WifiInfoData
+                val signal = values[3] as Int
+                val link = values[4] as Int
+                val freq = values[5] as Int
+                WifiStateBundle(connected, type, wifi, signal, link, freq)
+            }.catch { e ->
+                e.printStackTrace()
+            }.collect { bundle ->
+                val quality = calculateQuality(bundle.signalStrength)
+                val wifiData = bundle.wifiInfo?.let {
+                    WifiInfoData(
+                        ssid = it.ssid,
+                        bssid = it.bssid,
+                        ipAddress = it.ipAddress,
+                        linkSpeed = it.linkSpeed,
+                        frequency = it.frequency,
+                        rssi = it.rssi
+                    )
+                }
+
+                _uiState.update {
+                    it.copy(
+                        isConnected = bundle.isConnected,
+                        networkType = bundle.networkType,
+                        wifiInfo = wifiData,
+                        signalStrength = bundle.signalStrength,
+                        linkSpeed = bundle.linkSpeed,
+                        frequency = bundle.frequency,
+                        connectionQuality = quality
+                    )
+                }
             }
         }
     }
 
-    fun saveNetworkInfo() {
+    private fun collectNetworkHistory() {
         viewModelScope.launch {
-            val info = networkMonitor.wifiInfo.value ?: return@launch
-            networkRepository.insertNetworkInfo(
-                NetworkInfoEntity(
-                    networkName = info.ssid, networkType = "wifi", ssid = info.ssid,
-                    bssid = info.bssid, frequency = info.frequency, linkSpeed = info.linkSpeed,
-                    rssi = info.rssi, ipAddress = info.ipAddress, channel = info.channel,
-                    isSecure = info.isSecure
-                )
-            )
+            networkInfoRepository.getAll().catch { e ->
+                e.printStackTrace()
+            }.collect { history ->
+                val networks = history.map { it.ssid }.distinct()
+                _uiState.update {
+                    it.copy(
+                        networkHistory = history,
+                        distinctNetworks = networks
+                    )
+                }
+            }
         }
     }
-}
 
-data class WifiUiState(
-    val wifiInfo: WifiInfoData? = null, val signalStrength: Int = 0,
-    val linkSpeed: Int = 0, val frequency: Int = 0,
-    val frequencyBand: String = "", val signalDescription: String = "",
-    val lastSavedInfo: NetworkInfoEntity? = null
-)
+    fun calculateQuality(rssi: Int): String {
+        return when {
+            rssi >= -50 -> "Excellent"
+            rssi >= -65 -> "Good"
+            rssi >= -75 -> "Fair"
+            else -> "Poor"
+        }
+    }
+
+    fun getNetworkStats(ssid: String) {
+        viewModelScope.launch {
+            try {
+                val stats = networkInfoRepository.getBySsid(ssid).first()
+                _uiState.update {
+                    it.copy(
+                        networkHistory = stats
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private data class WifiStateBundle(
+        val isConnected: Boolean,
+        val networkType: String,
+        val wifiInfo: pl.netbio.internetusageanalyzer.service.WifiInfoData?,
+        val signalStrength: Int,
+        val linkSpeed: Int,
+        val frequency: Int
+    )
+}

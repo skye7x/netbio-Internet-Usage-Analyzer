@@ -1,16 +1,19 @@
 package pl.netbio.internetusageanalyzer.service
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import pl.netbio.internetusageanalyzer.data.local.entity.DataUsageEntity
+import kotlinx.coroutines.flow.first
 import pl.netbio.internetusageanalyzer.data.local.entity.AlertEntity
-import pl.netbio.internetusageanalyzer.data.repository.UsageRepository
+import pl.netbio.internetusageanalyzer.data.local.entity.DataUsageEntity
+import pl.netbio.internetusageanalyzer.data.repository.DataUsageRepository
 import pl.netbio.internetusageanalyzer.data.repository.AlertRepository
-import pl.netbio.internetusageanalyzer.data.repository.LimitRepository
 import pl.netbio.internetusageanalyzer.util.DataUsagePreferences
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -18,20 +21,23 @@ import java.util.concurrent.TimeUnit
 class UsageWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val usageRepository: UsageRepository,
+    private val dataUsageRepository: DataUsageRepository,
     private val alertRepository: AlertRepository,
-    private val limitRepository: LimitRepository,
     private val dataUsageMonitor: DataUsageMonitor,
     private val notificationHelper: NotificationHelper,
     private val preferences: DataUsagePreferences
 ) : CoroutineWorker(appContext, workerParams) {
 
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
     override suspend fun doWork(): Result {
         return try {
             recordUsage()
             checkLimits()
+            checkAnomalies()
+            autoResetLimits()
             Result.success()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Result.retry()
         }
     }
@@ -39,65 +45,138 @@ class UsageWorker @AssistedInject constructor(
     private suspend fun recordUsage() {
         val totalRx = dataUsageMonitor.getCurrentRxBytes()
         val totalTx = dataUsageMonitor.getCurrentTxBytes()
-        val cal = Calendar.getInstance()
-        val date = "${cal.get(Calendar.YEAR)}-${cal.get(Calendar.MONTH) + 1}-${cal.get(Calendar.DAY_OF_MONTH)}"
-        val hour = cal.get(Calendar.HOUR_OF_DAY)
-        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-        val weekOfYear = cal.get(Calendar.WEEK_OF_YEAR)
-        val month = cal.get(Calendar.MONTH) + 1
-        val year = cal.get(Calendar.YEAR)
-        val networkType = "wifi"
+        val today = dateFormat.format(Date())
+        val networkType = getNetworkType()
 
-        val usage = DataUsageEntity(
-            timestamp = System.currentTimeMillis(),
-            totalBytes = totalRx + totalTx,
-            wifiBytes = if (networkType == "wifi") totalRx + totalTx else 0,
-            mobileBytes = if (networkType == "mobile") totalRx + totalTx else 0,
-            rxBytes = totalRx,
-            txBytes = totalTx,
-            packageName = "system",
+        dataUsageRepository.insertOrUpdate(
+            date = today,
             networkType = networkType,
-            date = date,
-            hour = hour,
-            dayOfWeek = dayOfWeek,
-            weekOfYear = weekOfYear,
-            month = month,
-            year = year
+            bytesUsed = totalRx + totalTx,
+            rxBytes = totalRx,
+            txBytes = totalTx
         )
-        usageRepository.insertUsage(usage)
+    }
+
+    private fun getNetworkType(): String {
+        return try {
+            val cm = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val activeNetwork = cm.activeNetwork ?: return "other"
+            val capabilities = cm.getNetworkCapabilities(activeNetwork) ?: return "other"
+            when {
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "mobile"
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "ethernet"
+                else -> "other"
+            }
+        } catch (_: Exception) {
+            "wifi"
+        }
     }
 
     private suspend fun checkLimits() {
-        val usage = preferences.getCurrentDayUsage()
-        val dailyLimit = preferences.getDailyLimit()
+        val todayUsage = dataUsageMonitor.todayTotal.value
+
+        val dailyLimit = try { preferences.dailyLimit.first() } catch (_: Exception) { 0L }
+        val alertThreshold = try { preferences.alertThreshold.first() } catch (_: Exception) { 80 }
 
         if (dailyLimit > 0) {
-            val percentage = (usage.toFloat() / dailyLimit) * 100f
-            val warnPercent = preferences.getWarningPercentage()
-            val alertPercent = preferences.getAlertPercentage()
-
-            if (percentage >= alertPercent) {
-                notificationHelper.showLimitWarning("daily", usage, dailyLimit, percentage)
-                alertRepository.insertAlert(
+            val percentage = (todayUsage.toFloat() / dailyLimit) * 100f
+            if (percentage >= alertThreshold) {
+                notificationHelper.showLimitExceededNotification(todayUsage, dailyLimit, "daily")
+                alertRepository.insert(
                     AlertEntity(
+                        timestamp = System.currentTimeMillis(),
                         type = "usage_limit",
                         title = "Daily Limit Exceeded",
                         message = "You've used ${String.format("%.0f", percentage)}% of your daily limit",
-                        severity = "critical",
-                        percentage = percentage,
-                        limitBytes = dailyLimit,
-                        currentBytes = usage
+                        value = percentage.toDouble(),
+                        threshold = alertThreshold.toDouble()
                     )
                 )
-            } else if (percentage >= warnPercent) {
-                notificationHelper.showLimitWarning("daily", usage, dailyLimit, percentage)
             }
+        }
+
+        val weeklyLimit = try { preferences.weeklyLimit.first() } catch (_: Exception) { 0L }
+        if (weeklyLimit > 0) {
+            val weekUsage = dataUsageRepository.getWeekUsage().first()
+            val percentage = (weekUsage.toFloat() / weeklyLimit) * 100f
+            if (percentage >= alertThreshold) {
+                notificationHelper.showLimitExceededNotification(weekUsage, weeklyLimit, "weekly")
+                alertRepository.insert(
+                    AlertEntity(
+                        timestamp = System.currentTimeMillis(),
+                        type = "usage_limit",
+                        title = "Weekly Limit Exceeded",
+                        message = "You've used ${String.format("%.0f", percentage)}% of your weekly limit",
+                        value = percentage.toDouble(),
+                        threshold = alertThreshold.toDouble()
+                    )
+                )
+            }
+        }
+
+        val monthlyLimit = try { preferences.monthlyLimit.first() } catch (_: Exception) { 0L }
+        if (monthlyLimit > 0) {
+            val monthUsage = dataUsageRepository.getMonthUsage().first()
+            val percentage = (monthUsage.toFloat() / monthlyLimit) * 100f
+            if (percentage >= alertThreshold) {
+                notificationHelper.showLimitExceededNotification(monthUsage, monthlyLimit, "monthly")
+                alertRepository.insert(
+                    AlertEntity(
+                        timestamp = System.currentTimeMillis(),
+                        type = "usage_limit",
+                        title = "Monthly Limit Exceeded",
+                        message = "You've used ${String.format("%.0f", percentage)}% of your monthly limit",
+                        value = percentage.toDouble(),
+                        threshold = alertThreshold.toDouble()
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun checkAnomalies() {
+        val anomalyEnabled = try { preferences.anomalyDetectionEnabled.first() } catch (_: Exception) { false }
+        if (!anomalyEnabled) return
+
+        val anomalyScore = dataUsageMonitor.getAnomalyScore()
+        if (anomalyScore > 0.5) {
+            alertRepository.insert(
+                AlertEntity(
+                    timestamp = System.currentTimeMillis(),
+                    type = "anomaly",
+                    title = "Unusual Data Usage Detected",
+                    message = "Current usage is ${String.format("%.0f", anomalyScore * 100)}% above normal",
+                    value = anomalyScore,
+                    threshold = 0.5
+                )
+            )
+        }
+    }
+
+    private suspend fun autoResetLimits() {
+        val billingDay = try { preferences.billingCycleDay.first() } catch (_: Exception) { 1 }
+        val cal = Calendar.getInstance()
+        val dayOfMonth = cal.get(Calendar.DAY_OF_MONTH)
+        val hour = cal.get(Calendar.HOUR_OF_DAY)
+
+        if (dayOfMonth == billingDay && hour == 0) {
+            dataUsageMonitor.resetDaily()
+            alertRepository.insert(
+                AlertEntity(
+                    timestamp = System.currentTimeMillis(),
+                    type = "billing_cycle",
+                    title = "Billing Cycle Reset",
+                    message = "New billing cycle started. Counters have been reset.",
+                    value = 0.0,
+                    threshold = 0.0
+                )
+            )
         }
     }
 
     companion object {
         private const val WORK_NAME_USAGE = "usage_recording"
-        private const val WORK_NAME_SCHEDULED_SPEEDTEST = "scheduled_speedtest"
 
         fun scheduleUsageRecording(context: Context) {
             val request = PeriodicWorkRequestBuilder<UsageWorker>(

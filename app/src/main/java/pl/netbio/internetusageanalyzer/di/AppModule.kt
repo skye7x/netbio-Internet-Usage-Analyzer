@@ -7,7 +7,13 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import pl.netbio.internetusageanalyzer.data.local.dao.*
+import pl.netbio.internetusageanalyzer.data.local.dao.AchievementDao
+import pl.netbio.internetusageanalyzer.data.local.dao.AlertDao
+import pl.netbio.internetusageanalyzer.data.local.dao.DataUsageDao
+import pl.netbio.internetusageanalyzer.data.local.dao.DiagnosticDao
+import pl.netbio.internetusageanalyzer.data.local.dao.NetworkInfoDao
+import pl.netbio.internetusageanalyzer.data.local.dao.SpeedTestResultDao
+import pl.netbio.internetusageanalyzer.data.local.dao.UsageLimitDao
 import pl.netbio.internetusageanalyzer.data.local.database.NetBioDatabase
 import javax.inject.Singleton
 
@@ -30,7 +36,10 @@ object AppModule {
     fun provideDataUsageDao(db: NetBioDatabase): DataUsageDao = db.dataUsageDao()
 
     @Provides
-    fun provideSpeedTestDao(db: NetBioDatabase): SpeedTestDao = db.speedTestDao()
+    fun provideSpeedTestResultDao(db: NetBioDatabase): SpeedTestResultDao = db.speedTestResultDao()
+
+    @Provides
+    fun provideDiagnosticDao(db: NetBioDatabase): DiagnosticDao = db.diagnosticDao()
 
     @Provides
     fun provideAlertDao(db: NetBioDatabase): AlertDao = db.alertDao()
@@ -39,11 +48,8 @@ object AppModule {
     fun provideUsageLimitDao(db: NetBioDatabase): UsageLimitDao = db.usageLimitDao()
 
     @Provides
-    fun provideNetworkInfoDao(db: NetBioDatabase): NetworkInfoDao = db.networkInfoDao()
-
-    @Provides
-    fun provideDiagnosticDao(db: NetBioDatabase): DiagnosticDao = db.diagnosticDao()
-
-    @Provides
     fun provideAchievementDao(db: NetBioDatabase): AchievementDao = db.achievementDao()
+
+    @Provides
+    fun provideNetworkInfoDao(db: NetBioDatabase): NetworkInfoDao = db.networkInfoDao()
 }

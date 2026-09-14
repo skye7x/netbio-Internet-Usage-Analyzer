@@ -4,13 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Modifier
-import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
-import pl.netbio.internetusageanalyzer.service.NetworkMonitor
 import pl.netbio.internetusageanalyzer.service.DataUsageMonitor
-import pl.netbio.internetusageanalyzer.ui.navigation.AppNavigation
+import pl.netbio.internetusageanalyzer.service.NetworkMonitor
 import pl.netbio.internetusageanalyzer.ui.theme.NetBioTheme
 import javax.inject.Inject
 
@@ -27,11 +23,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         networkMonitor.startMonitoring()
+        dataUsageMonitor.startTracking()
 
         setContent {
             NetBioTheme {
-                val navController = rememberNavController()
-                AppNavigation(navController = navController)
+                NetBioApp()
             }
         }
     }
@@ -39,5 +35,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         networkMonitor.stopMonitoring()
+        dataUsageMonitor.stopTracking()
     }
 }

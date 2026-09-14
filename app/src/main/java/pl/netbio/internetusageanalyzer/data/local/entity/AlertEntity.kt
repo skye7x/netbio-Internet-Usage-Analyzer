@@ -6,13 +6,11 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "alerts")
 data class AlertEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val timestamp: Long = System.currentTimeMillis(),
-    val type: String = "usage_limit",
-    val title: String = "",
-    val message: String = "",
-    val severity: String = "info",
+    val timestamp: Long,
+    val type: String,
+    val title: String,
+    val message: String,
     val isRead: Boolean = false,
-    val percentage: Float = 0f,
-    val limitBytes: Long = 0,
-    val currentBytes: Long = 0
+    val value: Double = 0.0,
+    val threshold: Double = 0.0
 )

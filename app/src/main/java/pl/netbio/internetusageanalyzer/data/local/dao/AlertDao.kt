@@ -1,19 +1,26 @@
 package pl.netbio.internetusageanalyzer.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import pl.netbio.internetusageanalyzer.data.local.entity.AlertEntity
 
 @Dao
 interface AlertDao {
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(alert: AlertEntity): Long
+    suspend fun insert(alert: AlertEntity)
 
-    @Delete
-    suspend fun delete(alert: AlertEntity)
+    @Query("SELECT * FROM alerts ORDER BY timestamp DESC")
+    fun getAll(): Flow<List<AlertEntity>>
 
-    @Query("DELETE FROM alerts")
-    suspend fun deleteAll()
+    @Query("SELECT * FROM alerts WHERE isRead = 0 ORDER BY timestamp DESC")
+    fun getUnread(): Flow<List<AlertEntity>>
+
+    @Query("SELECT COUNT(*) FROM alerts WHERE isRead = 0")
+    fun getUnreadCount(): Flow<Int>
 
     @Query("UPDATE alerts SET isRead = 1 WHERE id = :id")
     suspend fun markAsRead(id: Long)
@@ -21,15 +28,9 @@ interface AlertDao {
     @Query("UPDATE alerts SET isRead = 1")
     suspend fun markAllAsRead()
 
-    @Query("SELECT * FROM alerts ORDER BY timestamp DESC")
-    fun getAllAlerts(): Flow<List<AlertEntity>>
+    @Query("DELETE FROM alerts WHERE timestamp < :cutoffDate")
+    suspend fun deleteOld(cutoffDate: Long)
 
-    @Query("SELECT * FROM alerts WHERE isRead = 0 ORDER BY timestamp DESC")
-    fun getUnreadAlerts(): Flow<List<AlertEntity>>
-
-    @Query("SELECT COUNT(*) FROM alerts WHERE isRead = 0")
-    fun getUnreadCount(): Flow<Int>
-
-    @Query("SELECT * FROM alerts WHERE type = :type ORDER BY timestamp DESC")
-    fun getAlertsByType(type: String): Flow<List<AlertEntity>>
+    @Query("DELETE FROM alerts WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

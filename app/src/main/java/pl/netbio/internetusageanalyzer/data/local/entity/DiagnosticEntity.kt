@@ -6,11 +6,8 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "diagnostics")
 data class DiagnosticEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val timestamp: Long = System.currentTimeMillis(),
-    val type: String = "dns",
-    val result: String = "",
-    val latency: Double = 0.0,
-    val isStable: Boolean = true,
-    val packetLoss: Double = 0.0,
-    val details: String = ""
+    val timestamp: Long,
+    val testType: String,
+    val result: String,
+    val isSuccess: Boolean
 )

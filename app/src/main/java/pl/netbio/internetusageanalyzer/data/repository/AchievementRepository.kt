@@ -10,13 +10,14 @@ import javax.inject.Singleton
 class AchievementRepository @Inject constructor(
     private val achievementDao: AchievementDao
 ) {
-    fun getAllAchievements(): Flow<List<AchievementEntity>> = achievementDao.getAllAchievements()
 
-    fun getUnlockedAchievements(): Flow<List<AchievementEntity>> = achievementDao.getUnlockedAchievements()
+    suspend fun insertOrUpdate(achievement: AchievementEntity) {
+        achievementDao.insertOrUpdate(achievement)
+    }
 
-    fun getUnlockedCount(): Flow<Int> = achievementDao.getUnlockedCount()
+    fun getAll(): Flow<List<AchievementEntity>> = achievementDao.getAll()
 
-    suspend fun insertAchievement(achievement: AchievementEntity): Long = achievementDao.insert(achievement)
+    fun getById(id: String): Flow<AchievementEntity?> = achievementDao.getById(id)
 
-    suspend fun updateAchievement(achievement: AchievementEntity) = achievementDao.update(achievement)
+    fun getUnlocked(): Flow<List<AchievementEntity>> = achievementDao.getUnlocked()
 }
