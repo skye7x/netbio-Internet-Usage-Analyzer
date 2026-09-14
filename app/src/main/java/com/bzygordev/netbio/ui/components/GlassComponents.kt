@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import com.bzygordev.netbio.ui.theme.*
 
 val GlassCardShape = RoundedCornerShape(20.dp)
@@ -235,7 +234,7 @@ private fun GlassNavItemView(item: GlassNavItem, isSelected: Boolean, onClick: (
         modifier = modifier
             .clip(shape).background(bgColor)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
-            .minimumInteractiveComponentSize()
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             // Horizontal padding shrinks on narrow items (weighted row) instead of a fixed
             // 16dp per side, which is what caused labels like "History" to get clipped by
             // the row's shape/bounds on smaller-width devices.

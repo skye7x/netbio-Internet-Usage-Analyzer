@@ -216,7 +216,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 GlassListItem(icon = Icons.Default.Info, title = "Version", subtitle = uiState.appVersion, iconTint = TextTertiary)
                 HorizontalDivider(color = GlassHigh)
-                GlassListItem(icon = Icons.Default.Code, title = "Developer", subtitle = "NetBio", iconTint = TextTertiary)
+                GlassListItem(icon = Icons.Default.Code, title = "Developer", subtitle = "Bartek Zygor", iconTint = TextTertiary)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
