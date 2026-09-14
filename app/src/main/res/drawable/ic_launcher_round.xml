@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <gradient
-        android:startColor="#60A5FA"
-        android:endColor="#A78BFA"
-        android:angle="135"/>
-    <size android:width="48dp" android:height="48dp"/>
-</shape>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M24,2C11.85,2 2,11.85 2,24C2,36.15 11.85,46 24,46C36.15,46 46,36.15 46,24C46,11.85 36.15,2 24,2Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,10L16,22L20,22L20,34L28,34L28,22L32,22Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M17,36L31,36L31,39L17,39Z"/>
+</vector>

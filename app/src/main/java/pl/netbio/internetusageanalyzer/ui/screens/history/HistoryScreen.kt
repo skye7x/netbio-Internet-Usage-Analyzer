@@ -40,7 +40,7 @@ fun HistoryScreen(
     val tabs = listOf("Day", "Week", "Month", "Year")
     val scrollState = rememberScrollState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         GlassGlowBackground(modifier = Modifier.fillMaxSize())
 
         Column(
@@ -48,6 +48,7 @@ fun HistoryScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(bottom = 80.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {

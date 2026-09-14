@@ -35,6 +35,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import pl.netbio.internetusageanalyzer.ui.theme.*
 
 val GlassCardShape = RoundedCornerShape(20.dp)
@@ -227,7 +231,7 @@ private fun GlassNavItemView(item: GlassNavItem, isSelected: Boolean, onClick: (
     ) {
         Icon(imageVector = item.icon, contentDescription = item.label, tint = contentColor, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.height(2.dp))
-        Text(text = item.label, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = contentColor)
+        Text(text = item.label, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = contentColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -244,7 +248,7 @@ fun GlassTabBar(
     Box(
         modifier = modifier.clip(shape).background(GlassLow).border(1.dp, GlassBorder, shape).padding(3.dp)
     ) {
-        Row {
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
             items.forEachIndexed { index, label ->
                 val isSelected = selectedIndex == index
                 val bgColor by animateColorAsState(targetValue = if (isSelected) AccentBlue.copy(alpha = 0.2f) else Color.Transparent, animationSpec = tween(200))
@@ -255,7 +259,7 @@ fun GlassTabBar(
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = label, style = MaterialTheme.typography.labelMedium, color = textColor)
+                    Text(text = label, style = MaterialTheme.typography.labelMedium, color = textColor, maxLines = 1)
                 }
             }
         }
@@ -268,15 +272,20 @@ fun GlassToggle(modifier: Modifier = Modifier, checked: Boolean, onCheckedChange
     val knobOffset by animateFloatAsState(targetValue = if (checked) 28f else 0f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
 
     Box(
-        modifier = modifier.size(width = 56.dp, height = 32.dp).clip(PillShape).background(trackColor)
-            .border(1.dp, GlassBorder, PillShape)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { onCheckedChange(!checked) }),
-        contentAlignment = Alignment.CenterStart
+        modifier = modifier.size(width = 56.dp, height = 48.dp),
+        contentAlignment = Alignment.Center
     ) {
         Box(
-            modifier = Modifier.offset(x = (3 + knobOffset).dp).size(26.dp).clip(CircleShape)
-                .background(TextPrimary).shadow(4.dp, CircleShape)
-        )
+            modifier = Modifier.size(width = 56.dp, height = 32.dp).clip(PillShape).background(trackColor)
+                .border(1.dp, GlassBorder, PillShape)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { onCheckedChange(!checked) }),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Box(
+                modifier = Modifier.offset(x = (3 + knobOffset).dp).size(26.dp).clip(CircleShape)
+                    .background(TextPrimary).shadow(4.dp, CircleShape)
+            )
+        }
     }
 }
 
@@ -305,7 +314,7 @@ fun GlassButton(
                 Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
             }
-            Text(text = text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold), color = Color.White)
+            Text(text = text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -334,7 +343,7 @@ fun GlassChip(
                 Icon(imageVector = icon, contentDescription = null, tint = textColor, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
             }
-            Text(text = text, style = MaterialTheme.typography.labelMedium, color = textColor)
+            Text(text = text, style = MaterialTheme.typography.labelMedium, color = textColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -414,7 +423,7 @@ fun GlassAlert(
             }
             Text(text = title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = TextPrimary, modifier = Modifier.weight(1f))
             if (onDismiss != null) {
-                IconButton(onClick = onDismiss, modifier = Modifier.size(20.dp)) {
+                IconButton(onClick = onDismiss, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = "Dismiss", tint = TextTertiary, modifier = Modifier.size(14.dp))
                 }
             }
@@ -482,7 +491,7 @@ fun GlassListItem(
     Row(
         modifier = modifier.fillMaxWidth()
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -505,13 +514,13 @@ fun GlassListItem(
 
 @Composable
 fun GlassGlowBackground(modifier: Modifier = Modifier) {
-    Box(modifier = modifier) {
+    Box(modifier = modifier.fillMaxSize()) {
         Box(
-            modifier = Modifier.size(250.dp).offset(x = (-60).dp, y = (-60).dp)
+            modifier = Modifier.size(250.dp).align(Alignment.TopStart).offset(x = (-60).dp, y = (-60).dp)
                 .background(Color(0xFF3B82F6).copy(alpha = 0.04f), CircleShape)
         )
         Box(
-            modifier = Modifier.size(200.dp).offset(x = 250.dp, y = 500.dp)
+            modifier = Modifier.size(200.dp).align(Alignment.BottomEnd).offset(x = 60.dp, y = 60.dp)
                 .background(Color(0xFFA855F7).copy(alpha = 0.03f), CircleShape)
         )
     }
@@ -531,7 +540,7 @@ fun GlassMetricRow(
             Spacer(modifier = Modifier.width(10.dp))
         }
         Text(text = label, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.weight(1f))
-        Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = TextPrimary)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -547,7 +556,7 @@ fun UsageBarChart(
     Column(modifier = modifier) {
         data.forEach { (label, value) ->
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(text = label, style = MaterialTheme.typography.labelSmall, color = labelColor, modifier = Modifier.width(36.dp))
+                Text(text = label, style = MaterialTheme.typography.labelSmall, color = labelColor, modifier = Modifier.widthIn(min = 32.dp, max = 50.dp))
                 Box(modifier = Modifier.weight(1f).height(14.dp).clip(shape).background(GlassLow)) {
                     Box(
                         modifier = Modifier.fillMaxHeight().fillMaxWidth(fraction = if (maxValue > 0) (value / maxValue).coerceIn(0f, 1f) else 0f)
@@ -555,7 +564,7 @@ fun UsageBarChart(
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = String.format("%.1f", value), style = MaterialTheme.typography.labelSmall, color = TextSecondary, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
+                Text(text = String.format("%.1f", value), style = MaterialTheme.typography.labelSmall, color = TextSecondary, modifier = Modifier.widthIn(min = 36.dp, max = 60.dp), textAlign = TextAlign.End)
             }
         }
     }

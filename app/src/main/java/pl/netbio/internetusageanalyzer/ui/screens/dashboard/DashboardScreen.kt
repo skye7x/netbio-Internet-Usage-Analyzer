@@ -1,6 +1,7 @@
 package pl.netbio.internetusageanalyzer.ui.screens.dashboard
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -31,7 +32,7 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         GlassGlowBackground(modifier = Modifier.fillMaxSize())
 
         Column(
@@ -39,6 +40,7 @@ fun DashboardScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(bottom = 80.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -259,13 +261,13 @@ fun DashboardScreen(
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 GlassSectionHeader(title = "Quick Actions")
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     GlassChip(text = "Speedtest", icon = Icons.Default.Speed, onClick = onNavigateToSpeedtest, selected = true)
                     GlassChip(text = "Diagnostics", icon = Icons.Default.NetworkCheck, onClick = onNavigateToDiagnostics)
                     GlassChip(text = "Wi-Fi Info", icon = Icons.Default.Wifi, onClick = onNavigateToWifi)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     GlassChip(text = "History", icon = Icons.Default.History, onClick = onNavigateToHistory)
                     GlassChip(text = "App Usage", icon = Icons.Default.Apps, onClick = onNavigateToAppUsage)
                 }

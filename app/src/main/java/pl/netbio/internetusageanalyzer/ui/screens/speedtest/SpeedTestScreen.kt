@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import pl.netbio.internetusageanalyzer.ui.components.*
@@ -25,7 +26,7 @@ fun SpeedTestScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         GlassGlowBackground(modifier = Modifier.fillMaxSize())
 
         Column(
@@ -33,6 +34,7 @@ fun SpeedTestScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(bottom = 80.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
@@ -41,7 +43,7 @@ fun SpeedTestScreen(
                 Text("Speed Test", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold), color = TextPrimary)
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -74,7 +76,9 @@ fun SpeedTestScreen(
                         Text(
                             text = String.format("%.1f", result.downloadSpeed),
                             style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
-                            color = AccentBlue
+                            color = AccentBlue,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text("Mbps Download", style = MaterialTheme.typography.bodyMedium, color = TextTertiary)
                     } else {
@@ -166,7 +170,7 @@ fun SpeedTestScreen(
                         }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    uiState.recentResults.take(10).forEach { test ->
+                    uiState.recentResults.take(5).forEach { test ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,

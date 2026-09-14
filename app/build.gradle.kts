@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "pl.netbio.internetusageanalyzer"
+    namespace = "com.bzygordev.netbio"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "pl.netbio.internetusageanalyzer"
+        applicationId = "com.bzygordev.netbio"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
